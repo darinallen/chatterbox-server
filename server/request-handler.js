@@ -11,6 +11,7 @@ this file and include it in basic-server.js so that it actually works.
 *Hint* Check out the node module documentation at http://nodejs.org/api/modules.html.
 
 **************************************************************/
+
 // These headers will allow Cross-Origin Resource Sharing (CORS).
 // This code allows this server to talk to websites that
 // are on different domains, for instance, your chat client.
@@ -25,6 +26,19 @@ var defaultCorsHeaders = {
   'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'access-control-allow-headers': 'content-type, accept',
   'access-control-max-age': 10 // Seconds.
+};
+
+var messages = {
+  results: [
+    {
+      createdAt: Date(),
+      objectId: 'a1',
+      roomname: 'lobby',
+      text: 'first',
+      updatedAt: Date(),
+      username: 'admin'
+    }
+  ]
 };
 
 exports.requestHandler = function(request, response) {
@@ -42,12 +56,17 @@ exports.requestHandler = function(request, response) {
   // Adding more logging to your server can be an easy way to get passive
   // debugging help, but you should always be careful about leaving stray
   // console.logs in your code.
-  var messages = {
-    results: []
-  };
 
   console.log('Serving request type ' + request.method + ' for url ' + request.url);
-  if (request.url === '/classes/messages') {
+  // set a variable that will be part of the conditional statement
+  // look for ? after /classes/messages key=value
+  // http://127.0.0.1:3000/classes/messages_
+    // if query exist, handle within the GET block
+  // modify url to slice
+
+  // OR if request.url.slice(0, 17) is '/classes/messages'
+
+  if (request.url === '/classes/messages' || request.url.slice(0, 18) === '/classes/messages?') {
 
     // See the note below about CORS headers.
     var headers = defaultCorsHeaders;
@@ -71,22 +90,42 @@ exports.requestHandler = function(request, response) {
       //
       // Calling .end "flushes" the response's internal buffer, forcing
       // node to actually send all the data over to the client.
-      console.log('line 59: ', messages);
+      console.log('messages: ', messages);
       response.writeHead(200, headers);
       response.end(JSON.stringify(messages));
     }
 
     if (request.method === 'POST') {
-      console.log('line 64, messages before push: ', messages);
-      console.log('line65, request: ', request);
-      messages.results.push(request._postData);
-      console.log('line 67, messages after push: ', messages);
+      var body = '';
+      request.setEncoding('utf8');
+      request.on('data', function(chunk) {
+        body += chunk;
+        let insert = JSON.parse(body);
+        messages.results.push(insert);
+      });
+
+      request.on('end', function() {
+        try {
+          response.writeHead(201, headers);
+          response.end();
+        } catch (err) {
+          response.statusCode = 400;
+          return response.end('error: ${err.message}');
+        }
+      });
+
+      // response.statusCode = 201;
       response.writeHead(201, headers);
       response.end('');
     }
 
+    if (request.method === 'OPTIONS') {
+      response.writeHead(200, headers);
+      response.end('Allow: GET, POST, PUT, DELETE, OPTIONS');
+    }
 
   } else {
-    response.end('Try again');
+    response.statusCode = 404;
+    response.end('Error: File not found');
   }
 };
