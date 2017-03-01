@@ -28,11 +28,12 @@ var defaultCorsHeaders = {
   'access-control-max-age': 10 // Seconds.
 };
 
+var objectId = 1;
 var messages = {
   results: [
     {
       createdAt: Date(),
-      objectId: 'a1',
+      objectId: objectId,
       roomname: 'lobby',
       text: 'first',
       updatedAt: Date(),
@@ -100,13 +101,16 @@ exports.requestHandler = function(request, response) {
       request.setEncoding('utf8');
       request.on('data', function(chunk) {
         body += chunk;
-        let insert = JSON.parse(body);
-        messages.results.push(insert);
       });
 
       request.on('end', function() {
         try {
+          console.log('TRY SUCCESS');
           response.writeHead(201, headers);
+          let insert = JSON.parse(body);
+          insert.objectId = ++objectId;
+          insert.createdAt = Date();
+          messages.results.push(insert);
           response.end();
         } catch (err) {
           response.statusCode = 400;
